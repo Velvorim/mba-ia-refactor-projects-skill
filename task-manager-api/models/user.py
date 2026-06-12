@@ -1,6 +1,10 @@
 from database import db
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
+
+# NOTE: SHA-256 é uma melhoria sobre MD5, mas para produção real
+# recomenda-se migrar para bcrypt: pip install bcrypt
+# e substituir set_password/check_password por bcrypt.hashpw/checkpw.
 
 class User(db.Model):
     __tablename__ = 'users'
@@ -11,7 +15,7 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(50), default='user')
     active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         return {
@@ -25,14 +29,11 @@ class User(db.Model):
         }
 
     def set_password(self, pwd):
-
-        self.password = hashlib.md5(pwd.encode()).hexdigest()
+        # SHA-256 substitui MD5 (AP-07 fix); migrar para bcrypt em produção
+        self.password = hashlib.sha256(pwd.encode()).hexdigest()
 
     def check_password(self, pwd):
-        return self.password == hashlib.md5(pwd.encode()).hexdigest()
+        return self.password == hashlib.sha256(pwd.encode()).hexdigest()
 
     def is_admin(self):
-        if self.role == 'admin':
-            return True
-        else:
-            return False
+        return self.role == 'admin'
